@@ -87,6 +87,19 @@
       "build": []
     },
     {
+      "key": "rt-flow-ios",
+      "name": "rt-flow-ios",
+      "dir": "addons/rt-flow-ios",
+      "trigger": ["addons/rt-flow-ios"],
+      "kind": "ipa",
+      "extId": "ai.devin.rtflow.ios",
+      "releaseTagPrefix": "rtflow-ios",
+      "assetName": "DevinCloud-mobile-ios-v{version}.ipa",
+      "title": "Devin Cloud 手机版 · iOS IPA（辅助 ②）",
+      "desc": "Devin Cloud 手机版 iOS 壳（未签名 IPA，需 TrollStore/AltStore/Sideloadly 等自签安装）：切号 + 内网穿透 + 网页多实例，复用安卓版同一套 engine JS 资产。",
+      "build": []
+    },
+    {
       "key": "devin-git-auth",
       "name": "devin-git-auth",
       "extId": "devaid.devin-git-auth",
