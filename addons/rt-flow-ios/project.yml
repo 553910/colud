@@ -24,12 +24,13 @@ targets:
       - path: App
         excludes:
           - "Shim/**"
-    resources:
       # JS 资产单一真源 = 安卓版 assets/engine (零拷贝共用, 改一处两端同鲜)
+      # XcodeGen 无顶层 resources 键: 资源须放 sources 并标 buildPhase: resources
       - path: ../rt-flow-app/app/src/main/assets/engine
         type: folder
         buildPhase: resources
       - path: App/Shim/native-shim.js
+        buildPhase: resources
     info:
       path: App/Info.plist
       properties:
