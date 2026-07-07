@@ -29,7 +29,7 @@ concurrency:
 
 jobs:
   build-release:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       # PR 事件构建 PR 分支以验证；push/main 与 dispatch 走 main 顶端发版。
       - uses: actions/checkout@v7
