@@ -1,0 +1,57 @@
+# rt-flow-ios · Devin Cloud 手机版 iOS 壳 (XcodeGen 工程定义)
+# 生成: xcodegen generate → DevinCloudMobile.xcodeproj
+# 版本号唯一事实源 = 下面的 MARKETING_VERSION (CI 据此定 tag rtflow-ios-v<版本>)
+name: DevinCloudMobile
+options:
+  bundleIdPrefix: ai.devin
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.9"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
+targets:
+  DevinCloudMobile:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+        excludes:
+          - "Shim/**"
+    resources:
+      # JS 资产单一真源 = 安卓版 assets/engine (零拷贝共用, 改一处两端同鲜)
+      - path: ../rt-flow-app/app/src/main/assets/engine
+        type: folder
+        buildPhase: resources
+      - path: App/Shim/native-shim.js
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Devin Cloud
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UILaunchScreen: {}
+        UIUserInterfaceStyle: Dark
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).SceneDelegate
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ai.devin.rtflow.ios
+    scheme:
+      configVariants: []

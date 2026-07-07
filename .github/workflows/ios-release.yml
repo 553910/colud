@@ -1,0 +1,109 @@
+name: Build & Release rt-flow IPA
+
+# 道法自然 · 手机版 iOS 去中心化发版：往 main 推 addons/rt-flow-ios/** 即自动在 macOS runner 上
+# XcodeGen 生成工程 → xcodebuild 无签名构建 → 打包未签名 IPA 发到 tag rtflow-ios-v<版本>
+# （资产 DevinCloud-mobile-ios-v<版本>.ipa）。版本号唯一事实源 = project.yml 的 MARKETING_VERSION。
+# 未签名 IPA 需自签工具安装（巨魔 TrollStore / AltStore / Sideloadly / 爱思助手等）。
+# 已存在同名资产则跳过（幂等，重跑不重复构建/覆盖）。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "addons/rt-flow-ios/**"
+      - "addons/rt-flow-app/app/src/main/assets/engine/**"
+      - ".github/workflows/ios-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rtflow-ipa-release
+  cancel-in-progress: false
+
+jobs:
+  build-release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: ver
+        run: |
+          set -e
+          VN=$(grep -oE 'MARKETING_VERSION: "[^"]+"' addons/rt-flow-ios/project.yml | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "vn=$VN" >> "$GITHUB_OUTPUT"
+          echo "tag=rtflow-ios-v$VN" >> "$GITHUB_OUTPUT"
+          echo "asset=DevinCloud-mobile-ios-v$VN.ipa" >> "$GITHUB_OUTPUT"
+          echo "rt-flow IPA: version=$VN"
+
+      - name: Skip if release already has this IPA
+        id: gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          TAG="${{ steps.ver.outputs.tag }}"
+          ASSET="${{ steps.ver.outputs.asset }}"
+          if gh release view "$TAG" --json assets -q '.assets[].name' 2>/dev/null | grep -qx "$ASSET"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "release $TAG already has $ASSET → skip build"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install XcodeGen
+        if: steps.gate.outputs.exists == 'false'
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        if: steps.gate.outputs.exists == 'false'
+        working-directory: addons/rt-flow-ios
+        run: xcodegen generate
+
+      - name: Build (unsigned, device)
+        if: steps.gate.outputs.exists == 'false'
+        working-directory: addons/rt-flow-ios
+        run: |
+          set -e
+          xcodebuild -project DevinCloudMobile.xcodeproj \
+            -scheme DevinCloudMobile \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package unsigned IPA
+        if: steps.gate.outputs.exists == 'false'
+        working-directory: addons/rt-flow-ios
+        run: |
+          set -e
+          APP=$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)
+          test -n "$APP"
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qry "${{ steps.ver.outputs.asset }}" Payload
+          ls -lh "${{ steps.ver.outputs.asset }}"
+
+      - name: Create/update GitHub release
+        if: steps.gate.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          TAG="${{ steps.ver.outputs.tag }}"
+          ASSET="addons/rt-flow-ios/${{ steps.ver.outputs.asset }}"
+          TITLE="Devin Cloud 手机版 iOS v${{ steps.ver.outputs.vn }}"
+          NOTES="v${{ steps.ver.outputs.vn }} · 未签名 IPA — 需自签安装（巨魔 TrollStore / AltStore / Sideloadly / 爱思助手等）。核心三合一：切号 + 内网穿透 + 网页多实例，复用安卓版同一套 engine JS 资产。"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$TITLE" --notes "$NOTES" --draft=false
+            gh release upload "$TAG" "$ASSET" --clobber
+          else
+            gh release create "$TAG" "$ASSET" --title "$TITLE" --notes "$NOTES" --target "$(git rev-parse HEAD)"
+          fi
+          echo "released $TAG"

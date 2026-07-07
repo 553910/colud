@@ -22,6 +22,12 @@ function moduleVersion(m) {
     if (!mt) throw new Error(`无法从 ${m.dir}/app/build.gradle 解析 versionName`);
     return mt[1];
   }
+  if (m.kind === "ipa") {
+    const yml = fs.readFileSync(path.join(repoRoot, m.dir, "project.yml"), "utf8");
+    const mt = yml.match(/MARKETING_VERSION:\s*["']([^"']+)["']/);
+    if (!mt) throw new Error(`无法从 ${m.dir}/project.yml 解析 MARKETING_VERSION`);
+    return mt[1];
+  }
   return JSON.parse(fs.readFileSync(path.join(repoRoot, m.dir, "package.json"), "utf8")).version;
 }
 
@@ -40,6 +46,13 @@ function row(m) {
     const rel = `https://github.com/${REPO}/releases/tag/${tag}`;
     const asset = `https://github.com/${REPO}/releases/download/${tag}/${assetName}`;
     return `| **${m.key}** | \`${ver}\` | \`${m.extId}\` _(APK)_ | ${m.desc} | [Release](${rel}) · [⬇ APK](${asset}) |`;
+  }
+  if (m.kind === "ipa") {
+    const tag = `${m.releaseTagPrefix}-v${ver}`;
+    const assetName = (m.assetName || `${m.name}-${ver}.ipa`).replace("{version}", ver);
+    const rel = `https://github.com/${REPO}/releases/tag/${tag}`;
+    const asset = `https://github.com/${REPO}/releases/download/${tag}/${assetName}`;
+    return `| **${m.key}** | \`${ver}\` | \`${m.extId}\` _(IPA)_ | ${m.desc} | [Release](${rel}) · [⬇ IPA](${asset}) |`;
   }
   const dir = `https://github.com/${REPO}/tree/main/${m.dir}`;
   return `| **${m.key}** | \`${ver}\` | _(Worker)_ | ${m.desc} | [源码](${dir}) |`;
