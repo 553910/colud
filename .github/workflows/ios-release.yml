@@ -13,6 +13,11 @@ on:
       - "addons/rt-flow-ios/**"
       - "addons/rt-flow-app/app/src/main/assets/engine/**"
       - ".github/workflows/ios-release.yml"
+  pull_request:
+    paths:
+      - "addons/rt-flow-ios/**"
+      - "addons/rt-flow-app/app/src/main/assets/engine/**"
+      - ".github/workflows/ios-release.yml"
   workflow_dispatch:
 
 permissions:
@@ -26,9 +31,9 @@ jobs:
   build-release:
     runs-on: macos-14
     steps:
+      # PR 事件构建 PR 分支以验证；push/main 与 dispatch 走 main 顶端发版。
       - uses: actions/checkout@v7
         with:
-          ref: main
           fetch-depth: 0
 
       - name: Resolve version
@@ -43,6 +48,7 @@ jobs:
 
       - name: Skip if release already has this IPA
         id: gate
+        if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -57,16 +63,16 @@ jobs:
           fi
 
       - name: Install XcodeGen
-        if: steps.gate.outputs.exists == 'false'
+        if: steps.gate.outputs.exists != 'true'
         run: brew install xcodegen
 
       - name: Generate Xcode project
-        if: steps.gate.outputs.exists == 'false'
+        if: steps.gate.outputs.exists != 'true'
         working-directory: addons/rt-flow-ios
         run: xcodegen generate
 
       - name: Build (unsigned, device)
-        if: steps.gate.outputs.exists == 'false'
+        if: steps.gate.outputs.exists != 'true'
         working-directory: addons/rt-flow-ios
         run: |
           set -e
@@ -79,7 +85,7 @@ jobs:
             build
 
       - name: Package unsigned IPA
-        if: steps.gate.outputs.exists == 'false'
+        if: steps.gate.outputs.exists != 'true'
         working-directory: addons/rt-flow-ios
         run: |
           set -e
@@ -91,7 +97,7 @@ jobs:
           ls -lh "${{ steps.ver.outputs.asset }}"
 
       - name: Create/update GitHub release
-        if: steps.gate.outputs.exists == 'false'
+        if: steps.gate.outputs.exists == 'false' && github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
