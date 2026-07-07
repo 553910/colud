@@ -8,6 +8,7 @@ import UserNotifications
 /// 异步方法 (httpReq/httpReqB64) 立即返回, 结果经 evaluateJavaScript 回灌 window.__httpCb。
 final class NativeBridge {
     static let promptToken = "__dao_native__"
+    static let devinHome = "https://app.devin.ai/"
 
     private weak var webView: WKWebView?
 
@@ -78,7 +79,7 @@ final class NativeBridge {
         case "log":
             NSLog("RTFlowEngine %@", argStr(a, 0)); return nil
         case "toast", "notify":
-            Self.postNotification(title: "Devin Cloud", text: argStr(a, 0)); return nil
+            Self.showToast(argStr(a, 0)); return nil
         case "notifyGlobal":
             Self.postNotification(title: argStr(a, 1), text: argStr(a, 2)); return nil
         case "vibrate":
@@ -148,7 +149,7 @@ final class NativeBridge {
             do { try FileManager.default.removeItem(at: f); return true } catch { return false }
 
         // ── 输出到人: 剪贴板 / 分享 / 看文本 / 存文件 ──
-        case "clip":
+        case "clip", "setClip":
             UIPasteboard.general.string = argStr(a, 0); return nil
         case "share":
             Self.presentShare(items: [argStr(a, 0)]); return nil
@@ -180,6 +181,19 @@ final class NativeBridge {
         // ── 多实例账号标签 ──
         case "openTab":
             TabManager.shared.openTab(url: argStr(a, 0), accountJson: argStr(a, 1)); return nil
+        case "openAccountTab":
+            TabManager.shared.openTab(url: Self.devinHome, accountJson: argStr(a, 0)); return nil
+        case "openUrlTab":
+            let u = argStr(a, 0)
+            TabManager.shared.openTab(url: u.isEmpty ? Self.devinHome : u, accountJson: ""); return nil
+        case "openEntryNewTab", "openEntryBg", "reopenAccount":
+            let u = argStr(a, 1)
+            TabManager.shared.openTab(url: u.isEmpty ? Self.devinHome : u, accountJson: argStr(a, 0)); return nil
+        case "openAccountSession":
+            var sid = argStr(a, 1).trimmingCharacters(in: .whitespaces)
+            if sid.hasPrefix("devin-") { sid = String(sid.dropFirst(6)) }
+            let u = sid.isEmpty ? Self.devinHome : "https://app.devin.ai/sessions/\(sid)"
+            TabManager.shared.openTab(url: u, accountJson: argStr(a, 0)); return nil
         case "listTabs":
             return TabManager.shared.listJson()
         case "closeTab":
@@ -212,6 +226,10 @@ final class NativeBridge {
             return ""
         case "usList", "usExportAll":
             return "[]"
+        case "appCheckUpdate", "appInstallUpdate":
+            return ""
+        case "menu":
+            return nil
 
         default:
             return nil
@@ -240,6 +258,32 @@ final class NativeBridge {
             guard let top = topViewController() else { return }
             let vc = TextViewerController(titleText: title, bodyText: text)
             top.present(UINavigationController(rootViewController: vc), animated: true)
+        }
+    }
+
+    /// 轻量 toast 浮层 (对齐安卓 Toast: 瞬时提示, 不走系统通知、不求权限)。
+    private static func showToast(_ text: String) {
+        guard !text.isEmpty else { return }
+        DispatchQueue.main.async {
+            guard let v = topViewController()?.view else { return }
+            let label = UILabel()
+            label.text = text
+            label.font = .systemFont(ofSize: 13)
+            label.textColor = .white
+            label.backgroundColor = UIColor.black.withAlphaComponent(0.8)
+            label.textAlignment = .center
+            label.numberOfLines = 3
+            label.layer.cornerRadius = 8
+            label.clipsToBounds = true
+            let maxW = v.bounds.width - 48
+            var size = label.sizeThatFits(CGSize(width: maxW - 24, height: .greatestFiniteMagnitude))
+            size.width = min(size.width + 24, maxW)
+            size.height += 16
+            label.frame = CGRect(x: (v.bounds.width - size.width) / 2,
+                                 y: v.bounds.height - size.height - 96,
+                                 width: size.width, height: size.height)
+            v.addSubview(label)
+            UIView.animate(withDuration: 0.3, delay: 2.2, options: []) { label.alpha = 0 } completion: { _ in label.removeFromSuperview() }
         }
     }
 
