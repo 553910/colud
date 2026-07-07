@@ -1,6 +1,6 @@
 {
   "versionCode": 268,
   "versionName": "0.37.164",
-  "url": "https://github.com/zhouyoukang1234-spec/devin-remote/releases/download/rtflow-v0.37.164/DevinCloud-mobile-v0.37.164.apk",
+  "url": "https://github.com/553910/colud/releases/download/rtflow-v0.37.164/DevinCloud-mobile-v0.37.164.apk",
   "notes": "v0.37.164 · 正本清源双修: ① 归零号提取103B空文件根治 —— auth1 过期致事件流/消息全 401, 旧逻辑吞成 ok:true 空 md 并缓存复用; 今 401/403 即用账密重登自愈再取, 仍失败如实报错, 空 md(无消息段)备份不再注入、改走网络重取。② 通知/额度自动刷新根治 —— 常驻引擎离屏 WebView 计时器被系统节流/冻结致 convwatch·额度轮形同虚设; 今由 RelayService 原生 Handler 周期外驱(evaluateJavascript 不受节流), 息屏/后台恒可靠, 另加单轮挂死看门狗"
 }
